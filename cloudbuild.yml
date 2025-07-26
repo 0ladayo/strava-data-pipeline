@@ -1,0 +1,21 @@
+steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args:
+  - gcloud
+  - functions
+  - deploy
+  - strava-webhook-receiver
+  - --gen2
+  - --region=${_LOCATION}
+  - --source=./cloud_functions/pubsub
+  - --trigger-http
+  - --runtime=python313
+  - --entry-point=main
+  - --memory=512Mi
+  - --timeout=60
+  - --ingress-settings=all
+  - --service-account=${_SERVICE_ACCOUNT_EMAIL}
+  - --set-env-vars=GCP_PROJECT_ID=${_PROJECT_ID},SECRET_MANAGER_ID=${_SECRET_MANAGER_ID},TOPIC_ID=${_TOPIC_ID}
+options:
+  logging: CLOUD_LOGGING_ONLY
+serviceAccount: projects/${_PROJECT_ID}/serviceAccounts/${_SERVICE_ACCOUNT_EMAIL}

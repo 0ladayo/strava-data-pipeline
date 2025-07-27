@@ -109,7 +109,7 @@ resource "google_cloudbuild_trigger" "webhook_receiver_build_trigger" {
   _PROJECT_ID = var.gcp_project_id
   _SECRET_MANAGER_ID = google_secret_manager_secret.strava_credentials.secret_id
   _TOPIC_ID = google_pubsub_topic.strava_activity_events.name
-  __SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
+  _SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
   }
 }
 

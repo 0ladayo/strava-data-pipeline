@@ -14,6 +14,7 @@ steps:
   - --memory=512Mi
   - --timeout=60
   - --ingress-settings=all
+  - --allow-unauthenticated
   - --service-account=${_SERVICE_ACCOUNT_EMAIL}
   - --set-env-vars=GCP_PROJECT_ID=${_PROJECT_ID},SECRET_MANAGER_ID=${_SECRET_MANAGER_ID},TOPIC_ID=${_TOPIC_ID}
 options:

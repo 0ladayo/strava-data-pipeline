@@ -17,6 +17,7 @@ resource "google_project_service" "required_apis" {
     "pubsub.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
+    "cloudresourcemanager.googleapis.com"
   ])
 
   service            = each.key
@@ -98,7 +99,7 @@ resource "google_cloudbuild_trigger" "webhook_receiver_build_trigger" {
     }
   }
   
-  filename = "cloudbuild.yml"
+  filename = "cloud_functions/pubsub/webhook-receiver.cloudbuild.yml"
 
   included_files = ["cloud_functions/pubsub/**"]
 

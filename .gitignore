@@ -1,0 +1,29 @@
+# Terraform state and variables
+terraform/terraform.tfvars
+terraform/.terraform/
+terraform/*.zip
+terraform/*.backup
+*.tfstate
+*.tfstate.backup
+terraform/.terraform.lock.hcl
+
+
+# Python virtual environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# State files
+cloud_functions/extract/state.json
+
+# IDE configuration
+.vscode/ 
+
+# Docker ignore 
+.dockerignore/
+
+# dbt artifacts
+logs/
+target/
+dbt.sh

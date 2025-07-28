@@ -50,3 +50,13 @@ variable "pubsub_topic_id" {
   description = "The Pub/Sub Topic ID."
   type        = string
 }
+
+variable "gcs_bucket_name" {
+  description = "The Bucket to store State.Json"
+  type        = string
+}
+
+variable "gcs_bucket_name_ii" {
+  description = "The Bucket to store State.Json"
+  type        = string
+}

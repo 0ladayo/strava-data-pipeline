@@ -80,12 +80,6 @@ resource "google_pubsub_topic" "strava_activity_events" {
   depends_on = [google_project_service.required_apis]
 }
 
-resource "google_artifact_registry_repository" "webhook_receiver_repo" {
-  location      = var.gcp_project_region
-  repository_id = "strava-pipeline-webhook-receiver-repo"
-  format        = "DOCKER"
-}
-
 resource "google_cloudbuild_trigger" "webhook_receiver_build_trigger" {
   location = var.gcp_project_region
   name     = "webhook-receiver-build-trigger"
@@ -104,7 +98,6 @@ resource "google_cloudbuild_trigger" "webhook_receiver_build_trigger" {
   included_files = ["cloud_functions/pubsub/**"]
 
   substitutions = {
-  _REPO_ID    = google_artifact_registry_repository.webhook_receiver_repo.repository_id
   _LOCATION   = var.gcp_project_region
   _PROJECT_ID = var.gcp_project_id
   _SECRET_MANAGER_ID = google_secret_manager_secret.strava_credentials.secret_id
@@ -125,4 +118,59 @@ resource "google_secret_manager_secret_iam_member" "strava_secret_accessor" {
   secret_id = google_secret_manager_secret.strava_credentials.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
+resource "google_storage_bucket" "state_storage" {
+  name                        = "${var.gcs_bucket_name}-${var.gcp_project_id}"
+  location                    = var.gcp_project_region
+  project                     = var.gcp_project_id
+  uniform_bucket_level_access = true
+  force_destroy               = false
+}
+
+resource "google_storage_bucket_iam_member" "state_storage_object_viewer" {
+  bucket = google_storage_bucket.state_storage.name
+  role = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
+resource "google_storage_bucket" "strava_activity_storage" {
+  name                        = "${var.gcs_bucket_name_ii}-${var.gcp_project_id}"
+  location                    = var.gcp_project_region
+  project                     = var.gcp_project_id
+  uniform_bucket_level_access = true
+  force_destroy               = false
+}
+
+resource "google_storage_bucket_iam_member" "strava_activity_storage_writer" {
+  bucket = google_storage_bucket.strava_activity_storage.name
+  role = "roles/storage.objectCreator"
+  member = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
+resource "google_cloudbuild_trigger" "activity_extractor_build_trigger" {
+  location = var.gcp_project_region
+  name     = "activity-extractor-build-trigger"
+  service_account = google_service_account.strava_pipeline.id
+
+  repository_event_config {
+    repository =  "projects/${var.gcp_project_id}/locations/${var.gcp_project_region}/connections/github-connection/repositories/0ladayo-strava-data-pipeline"
+    
+    push {
+      branch = "^main$"
+    }
+  }
+  
+  filename = "cloud_functions/extract/activity-extractor.cloudbuild.yml"
+
+  included_files = ["cloud_functions/extract/**"]
+
+  substitutions = {
+  _LOCATION   = var.gcp_project_region
+  _PROJECT_ID = var.gcp_project_id
+  _STATE_AUTH_BUCKET = var.gcs_bucket_name
+  _STRAVA_ACTIVITY_BUCKET = var.gcs_bucket_name_ii
+  _SECRET_MANAGER_ID = google_secret_manager_secret.strava_credentials.secret_id
+  _SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
+  }
 }

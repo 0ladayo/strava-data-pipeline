@@ -38,7 +38,8 @@ resource "google_project_iam_member" "strava_pipeline_permissions" {
     "roles/run.admin",
     "roles/cloudfunctions.developer",
     "roles/iam.serviceAccountUser",
-    "roles/bigquery.jobUser"
+    "roles/bigquery.jobUser",
+    "roles/eventarc.eventReceiver"
   ])
 
   project = data.google_project.project.project_id

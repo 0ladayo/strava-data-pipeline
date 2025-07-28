@@ -1,0 +1,21 @@
+steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args:
+  - gcloud
+  - functions
+  - deploy
+  - strava-activity-loader
+  - --gen2
+  - --region=${_LOCATION}
+  - --source=./cloud_functions/load
+  - --trigger-bucket=${_STRAVA_ACTIVITY_BUCKET}
+  - --runtime=python313
+  - --entry-point=main
+  - --memory=512Mi
+  - --timeout=540
+  - --ingress-settings=internal-only
+  - --service-account=${_SERVICE_ACCOUNT_EMAIL}
+  - --set-env-vars=GCP_PROJECT_ID=${_PROJECT_ID},BIGQUERY_DATASET_ID=${_BIGQUERY_DATASET_ID},BIGQUERY_TABLE_ID=${_BIGQUERY_TABLE_ID}
+options:
+  logging: CLOUD_LOGGING_ONLY
+serviceAccount: projects/${_PROJECT_ID}/serviceAccounts/${_SERVICE_ACCOUNT_EMAIL}

@@ -27,7 +27,7 @@ resource "google_project_service" "required_apis" {
 resource "google_service_account" "strava_pipeline" {
   account_id   = "strava-service-account"
   display_name = "Service Account for Strava Data Pipeline"
-  project      = var.gcp_project_id
+  project      = data.google_project.project.project_id
 
   depends_on = [google_project_service.required_apis]
 }
@@ -37,17 +37,18 @@ resource "google_project_iam_member" "strava_pipeline_permissions" {
     "roles/logging.logWriter",
     "roles/run.admin",
     "roles/cloudfunctions.developer",
-    "roles/iam.serviceAccountUser"
+    "roles/iam.serviceAccountUser",
+    "roles/bigquery.jobUser"
   ])
 
-  project = var.gcp_project_id
+  project = data.google_project.project.project_id
   role    = each.key
   member  = "serviceAccount:${google_service_account.strava_pipeline.email}"
 }
 
 
 resource "google_project_iam_member" "gcs_eventarc_permissions" {
-  project = var.gcp_project_id
+  project = data.google_project.project.project_id
   role    = "roles/pubsub.publisher"
   member  = "serviceAccount:service-${data.google_project.project.number}@gs-project-accounts.iam.gserviceaccount.com"
 }
@@ -58,14 +59,14 @@ resource "google_project_iam_member" "service_agent_invokers" {
     "serviceAccount:service-${data.google_project.project.number}@gs-project-accounts.iam.gserviceaccount.com"
   ])
 
-  project = var.gcp_project_id
+  project = data.google_project.project.project_id
   role    = "roles/run.invoker"
   member  = each.key
 }
 
 resource "google_secret_manager_secret" "strava_credentials" {
   secret_id = "strava-client-secrets"
-  project   = var.gcp_project_id
+  project   = data.google_project.project.project_id
 
   replication {
     auto {}
@@ -76,7 +77,7 @@ resource "google_secret_manager_secret" "strava_credentials" {
 
 resource "google_pubsub_topic" "strava_activity_events" {
   name    = var.pubsub_topic_id
-  project = var.gcp_project_id
+  project = data.google_project.project.project_id
   depends_on = [google_project_service.required_apis]
 }
 
@@ -86,7 +87,7 @@ resource "google_cloudbuild_trigger" "webhook_receiver_build_trigger" {
   service_account = google_service_account.strava_pipeline.id
 
   repository_event_config {
-    repository =  "projects/${var.gcp_project_id}/locations/${var.gcp_project_region}/connections/github-connection/repositories/0ladayo-strava-data-pipeline"
+    repository =  "projects/${data.google_project.project.project_id}/locations/${var.gcp_project_region}/connections/github-connection/repositories/0ladayo-strava-data-pipeline"
     
     push {
       branch = "^main$"
@@ -99,7 +100,7 @@ resource "google_cloudbuild_trigger" "webhook_receiver_build_trigger" {
 
   substitutions = {
   _LOCATION   = var.gcp_project_region
-  _PROJECT_ID = var.gcp_project_id
+  _PROJECT_ID = data.google_project.project.project_id
   _SECRET_MANAGER_ID = google_secret_manager_secret.strava_credentials.secret_id
   _TOPIC_ID = google_pubsub_topic.strava_activity_events.name
   _SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
@@ -107,7 +108,7 @@ resource "google_cloudbuild_trigger" "webhook_receiver_build_trigger" {
 }
 
 resource "google_pubsub_topic_iam_member" "strava_pipeline_publisher" {
-  project = var.gcp_project_id
+  project = data.google_project.project.project_id
   topic   = google_pubsub_topic.strava_activity_events.id
   role    = "roles/pubsub.publisher"
   member  = "serviceAccount:${google_service_account.strava_pipeline.email}"
@@ -121,9 +122,9 @@ resource "google_secret_manager_secret_iam_member" "strava_secret_accessor" {
 }
 
 resource "google_storage_bucket" "state_storage" {
-  name                        = "${var.gcs_bucket_name}-${var.gcp_project_id}"
+  name                        = "${var.gcs_bucket_name}-${data.google_project.project.project_id}"
   location                    = var.gcp_project_region
-  project                     = var.gcp_project_id
+  project                     = data.google_project.project.project_id
   uniform_bucket_level_access = true
   force_destroy               = false
 }
@@ -135,9 +136,9 @@ resource "google_storage_bucket_iam_member" "state_storage_object_viewer" {
 }
 
 resource "google_storage_bucket" "strava_activity_storage" {
-  name                        = "${var.gcs_bucket_name_ii}-${var.gcp_project_id}"
+  name                        = "${var.gcs_bucket_name_ii}-${data.google_project.project.project_id}"
   location                    = var.gcp_project_region
-  project                     = var.gcp_project_id
+  project                     = data.google_project.project.project_id
   uniform_bucket_level_access = true
   force_destroy               = false
 }
@@ -154,7 +155,7 @@ resource "google_cloudbuild_trigger" "activity_extractor_build_trigger" {
   service_account = google_service_account.strava_pipeline.id
 
   repository_event_config {
-    repository =  "projects/${var.gcp_project_id}/locations/${var.gcp_project_region}/connections/github-connection/repositories/0ladayo-strava-data-pipeline"
+    repository =  "projects/${data.google_project.project.project_id}/locations/${var.gcp_project_region}/connections/github-connection/repositories/0ladayo-strava-data-pipeline"
     
     push {
       branch = "^main$"
@@ -167,11 +168,150 @@ resource "google_cloudbuild_trigger" "activity_extractor_build_trigger" {
 
   substitutions = {
   _LOCATION   = var.gcp_project_region
-  _PROJECT_ID = var.gcp_project_id
+  _PROJECT_ID = data.google_project.project.project_id
   _TOPIC_ID = google_pubsub_topic.strava_activity_events.name
-  _STATE_AUTH_BUCKET = var.gcs_bucket_name
-  _STRAVA_ACTIVITY_BUCKET = var.gcs_bucket_name_ii
+  _STATE_AUTH_BUCKET = google_storage_bucket.state_storage.name
+  _STRAVA_ACTIVITY_BUCKET = google_storage_bucket.strava_activity_storage.name
   _SECRET_MANAGER_ID = google_secret_manager_secret.strava_credentials.secret_id
+  _SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
+  }
+}
+
+resource "google_storage_bucket_iam_member" "strava_activity_object_viewer" {
+  bucket = google_storage_bucket.strava_activity_storage.name
+  role = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
+resource "google_bigquery_dataset" "strava_activities" {
+  dataset_id                 = var.bigquery_dataset_id
+  friendly_name              = "strava activities Dataset"
+  location                   = var.gcp_project_region
+  project                    = data.google_project.project.project_id
+  delete_contents_on_destroy = false
+
+  depends_on = [google_project_service.required_apis]
+}
+
+resource "google_bigquery_table" "activity_data" {
+  dataset_id          = google_bigquery_dataset.strava_activities.dataset_id
+  table_id            = var.bigquery_table_id
+  project             = data.google_project.project.project_id
+  deletion_protection = true
+
+  schema = jsonencode([
+    {
+      name        = "id"
+      type        = "INTEGER"
+      mode        = "REQUIRED"
+      description = "The unique identifier for the activity"
+    },
+    {
+      name = "distance"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name        = "time"
+      type        = "INTEGER"
+      mode        = "NULLABLE"
+      description = "Elapsed time in seconds"
+    },
+    {
+      name = "elevation_high"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "elevation_low"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "elevation_gain"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "average_speed"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "maximum_speed"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "start_latitude"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "start_longitude"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "end_latitude"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "end_longitude"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name = "average_cadence"
+      type = "FLOAT"
+      mode = "NULLABLE"
+    },
+    {
+      name        = "start_datetime"
+      type        = "TIMESTAMP"
+      mode        = "NULLABLE"
+      description = "The start time of the activity"
+    },
+    {
+      name        = "end_datetime"
+      type        = "TIMESTAMP"
+      mode        = "NULLABLE"
+      description = "The end time of the activity"
+    }
+  ])
+}
+
+resource "google_bigquery_dataset_iam_member" "strava_pipeline_bigquery_permissions" {
+  dataset_id = google_bigquery_dataset.strava_activities.dataset_id
+  project    = google_bigquery_dataset.strava_activities.project
+  role       = "roles/bigquery.dataEditor"
+  member     = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
+resource "google_cloudbuild_trigger" "activity_loader_build_trigger" {
+  location = var.gcp_project_region
+  name     = "activity-loader-build-trigger"
+  service_account = google_service_account.strava_pipeline.id
+
+  repository_event_config {
+    repository =  "projects/${data.google_project.project.project_id}/locations/${var.gcp_project_region}/connections/github-connection/repositories/0ladayo-strava-data-pipeline"
+    
+    push {
+      branch = "^main$"
+    }
+  }
+  
+  filename = "cloud_functions/load/activity-loader.cloudbuild.yml"
+
+  included_files = ["cloud_functions/load/**"]
+
+  substitutions = {
+  _LOCATION   = var.gcp_project_region
+  _PROJECT_ID = data.google_project.project.project_id
+  _STRAVA_ACTIVITY_BUCKET = google_storage_bucket.strava_activity_storage.name
+  _BIGQUERY_DATASET_ID = google_bigquery_dataset.strava_activities.dataset_id
+  _BIGQUERY_TABLE_ID = google_bigquery_table.activity_data.table_id
   _SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
   }
 }

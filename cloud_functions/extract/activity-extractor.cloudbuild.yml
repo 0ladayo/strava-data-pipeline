@@ -1,0 +1,21 @@
+steps:
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args:
+  - gcloud
+  - functions
+  - deploy
+  - strava-activity-extractor
+  - --gen2
+  - --region=${_LOCATION}
+  - --source=./cloud_functions/extract
+  - --trigger-topic=${_TOPIC_ID}
+  - --runtime=python313
+  - --entry-point=main
+  - --memory=512Mi
+  - --timeout=540
+  - --ingress-settings=internal-only
+  - --service-account=${_SERVICE_ACCOUNT_EMAIL}
+  - --set-env-vars=GCP_PROJECT_ID=${_PROJECT_ID},SECRET_MANAGER_ID=${_SECRET_MANAGER_ID},STATE_AUTH_BUCKET=${_STATE_AUTH_BUCKET},STRAVA_ACTIVITY_BUCKET=${_STRAVA_ACTIVITY_BUCKET}
+options:
+  logging: CLOUD_LOGGING_ONLY
+serviceAccount: projects/${_PROJECT_ID}/serviceAccounts/${_SERVICE_ACCOUNT_EMAIL}

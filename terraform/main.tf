@@ -168,6 +168,7 @@ resource "google_cloudbuild_trigger" "activity_extractor_build_trigger" {
   substitutions = {
   _LOCATION   = var.gcp_project_region
   _PROJECT_ID = var.gcp_project_id
+  _TOPIC_ID = google_pubsub_topic.strava_activity_events.name
   _STATE_AUTH_BUCKET = var.gcs_bucket_name
   _STRAVA_ACTIVITY_BUCKET = var.gcs_bucket_name_ii
   _SECRET_MANAGER_ID = google_secret_manager_secret.strava_credentials.secret_id

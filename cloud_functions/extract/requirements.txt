@@ -1,0 +1,8 @@
+gcsfs
+stravalib
+pandas
+google-cloud-secret-manager
+requests
+google-cloud-storage
+pyarrow
+google-cloud-bigquery 

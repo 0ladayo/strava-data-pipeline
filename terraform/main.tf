@@ -160,7 +160,7 @@ resource "google_storage_bucket_iam_member" "strava_activity_object_viewer" {
 
 resource "google_storage_bucket_iam_member" "state_storage_object_creator" {
   bucket = google_storage_bucket.state_storage.name
-  role = "roles/storage.objectCreator"
+  role = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.strava_pipeline.email}"
 }
 

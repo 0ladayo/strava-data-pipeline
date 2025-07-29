@@ -1,0 +1,25 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - build
+    - -t
+    - ${_LOCATION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO_ID}/dbt-runner/:$COMMIT_SHA
+    - ./cloud_functions/transform/
+
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+    - run
+    - jobs
+    - deploy
+    - dbt-run-job
+    - --image
+    - ${_LOCATION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO_ID}/dbt-runner:$COMMIT_SHA
+    - --region=${_LOCATION}
+    - --service-account=${_SERVICE_ACCOUNT_EMAIL}
+    - --set-env-vars=DBT_PROJECT=${_PROJECT_ID},'DBT_DATASET'=${_BIGQUERY_DATASET_ID},DBT_LOCATION=${_LOCATION},
+images:
+- '${_LOCATION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO_ID}/dbt-runner:$COMMIT_SHA'
+options:
+  logging: CLOUD_LOGGING_ONLY
+serviceAccount: projects/${_PROJECT_ID}/serviceAccounts/${_SERVICE_ACCOUNT_EMAIL}

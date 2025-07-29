@@ -1,0 +1,16 @@
+name: 'strava_pipeline_transform'
+version: '1.0.0'
+config-version: 2
+
+profile: 'strava_pipeline'
+
+model-paths: ["models"]
+
+models:
+  strava_pipeline_transform:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: ephemeral
+    marts:
+      +materialized: table

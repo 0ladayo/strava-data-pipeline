@@ -326,3 +326,52 @@ resource "google_cloudbuild_trigger" "activity_loader_build_trigger" {
   _SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
   }
 }
+
+resource "google_artifact_registry_repository" "strava-transformation-repository" {
+  project       = data.google_project.project.project_id
+  location      = var.gcp_project_region
+  repository_id = "strava-pipeline-transformation-repository"
+  format        = "DOCKER"
+}
+
+resource "google_artifact_registry_repository_iam_member" "dbt_repo_writer" {
+  project = google_artifact_registry_repository.strava-transformation-repository.project
+  location = google_artifact_registry_repository.strava-transformation-repository.location
+  repository = google_artifact_registry_repository.strava-transformation-repository.name
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
+resource "google_artifact_registry_repository_iam_member" "dbt_repo_reader" {
+  location   = google_artifact_registry_repository.strava-transformation-repository.location
+  repository = google_artifact_registry_repository.strava-transformation-repository.name
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
+resource "google_cloudbuild_trigger" "dbt_image_build_trigger" {
+  name            = "dbt-image-build-trigger"
+  location        = var.gcp_project_region
+  project         = data.google_project.project.project_id
+  service_account = google_service_account.strava_pipeline.id
+
+  repository_event_config {
+    repository = "projects/${data.google_project.project.project_id}/locations/${var.gcp_project_region}/connections/github-connection/repositories/0ladayo-strava-data-pipeline"
+    push {
+      branch = "^main$"
+    }
+  }
+  
+  filename = "cloud_functions/transform/dbt-transformation.cloudbuild.yml"
+
+  included_files = [
+    "cloud_functions/transform/**"
+  ]
+
+  substitutions = {
+    _LOCATION       = var.gcp_project_region
+    _PROJECT_ID     = data.google_project.project.project_id
+    _REPO_ID        = google_artifact_registry_repository.strava-transformation-repository.repository_id
+    _BIGQUERY_DATASET_ID = google_bigquery_dataset.strava_activities.dataset_id
+  }
+}

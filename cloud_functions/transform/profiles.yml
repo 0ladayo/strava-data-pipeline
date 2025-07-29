@@ -1,0 +1,10 @@
+strava_pipeline_transform:
+  target: prod
+  outputs:
+    prod:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('DBT_PROJECT') }}"
+      dataset: "{{ env_var('DBT_DATASET') }}"
+      threads: 4
+      location: "{{ env_var('DBT_LOCATION') }}"

@@ -39,7 +39,8 @@ resource "google_project_iam_member" "strava_pipeline_permissions" {
     "roles/cloudfunctions.developer",
     "roles/iam.serviceAccountUser",
     "roles/bigquery.jobUser",
-    "roles/eventarc.eventReceiver"
+    "roles/eventarc.eventReceiver",
+    "roles/eventarc.admin"
   ])
 
   project = data.google_project.project.project_id
@@ -57,7 +58,8 @@ resource "google_project_iam_member" "gcs_eventarc_permissions" {
 resource "google_project_iam_member" "service_agent_invokers" {
   for_each = toset([
     "serviceAccount:service-${data.google_project.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.project.number}@gs-project-accounts.iam.gserviceaccount.com"
+    "serviceAccount:service-${data.google_project.project.number}@gs-project-accounts.iam.gserviceaccount.com",
+    "serviceAccount:service-${data.google_project.project.number}@gcp-sa-eventarc.iam.gserviceaccount.com"
   ])
 
   project = data.google_project.project.project_id
@@ -150,6 +152,18 @@ resource "google_storage_bucket_iam_member" "strava_activity_storage_writer" {
   member = "serviceAccount:${google_service_account.strava_pipeline.email}"
 }
 
+resource "google_storage_bucket_iam_member" "strava_activity_object_viewer" {
+  bucket = google_storage_bucket.strava_activity_storage.name
+  role = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
+resource "google_storage_bucket_iam_member" "state_storage_object_creator" {
+  bucket = google_storage_bucket.state_storage.name
+  role = "roles/storage.objectCreator"
+  member = "serviceAccount:${google_service_account.strava_pipeline.email}"
+}
+
 resource "google_cloudbuild_trigger" "activity_extractor_build_trigger" {
   location = var.gcp_project_region
   name     = "activity-extractor-build-trigger"
@@ -176,12 +190,6 @@ resource "google_cloudbuild_trigger" "activity_extractor_build_trigger" {
   _SECRET_MANAGER_ID = google_secret_manager_secret.strava_credentials.secret_id
   _SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
   }
-}
-
-resource "google_storage_bucket_iam_member" "strava_activity_object_viewer" {
-  bucket = google_storage_bucket.strava_activity_storage.name
-  role = "roles/storage.objectViewer"
-  member = "serviceAccount:${google_service_account.strava_pipeline.email}"
 }
 
 resource "google_bigquery_dataset" "strava_activities" {

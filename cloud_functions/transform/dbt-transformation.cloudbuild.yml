@@ -3,7 +3,7 @@ steps:
   args:
     - build
     - -t
-    - ${_LOCATION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO_ID}/dbt-runner/:$COMMIT_SHA
+    - ${_LOCATION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO_ID}/dbt-runner:$COMMIT_SHA
     - ./cloud_functions/transform/
 
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'

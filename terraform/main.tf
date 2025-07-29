@@ -188,6 +188,8 @@ resource "google_cloudbuild_trigger" "activity_extractor_build_trigger" {
   _STATE_AUTH_BUCKET = google_storage_bucket.state_storage.name
   _STRAVA_ACTIVITY_BUCKET = google_storage_bucket.strava_activity_storage.name
   _SECRET_MANAGER_ID = google_secret_manager_secret.strava_credentials.secret_id
+  _BIGQUERY_DATASET_ID = google_bigquery_dataset.strava_activities.dataset_id
+  _BIGQUERY_TABLE_ID = google_bigquery_table.activity_data.table_id
   _SERVICE_ACCOUNT_EMAIL = google_service_account.strava_pipeline.email
   }
 }

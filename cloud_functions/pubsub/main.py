@@ -34,8 +34,9 @@ def main(request):
     elif request.method == 'POST':
         try:
             print("Webhook received. Publishing message to Pub/Sub...")
-            publisher.publish(topic_path, b'New activity created')
-            print(f"Message successfully queued for publishing to {topic_path}.")
+            future = publisher.publish(topic_path, request.data)
+            future.result()
+            print(f"Message successfully published to {topic_path}.")
             return 'OK', 200
         except Exception as e:
             print(f"An error occurred while queueing the message for Pub/Sub: {e}")

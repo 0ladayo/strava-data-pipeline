@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: strava_activity
-    database: strava-project-463820
-    schema: strava_activity_dataset
+    database: "{{ env_var('DBT_PROJECT') }}"
+    schema: "{{ env_var('DBT_DATASET') }}"
     tables:
       - name: strava_activity_table

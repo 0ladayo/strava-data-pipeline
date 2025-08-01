@@ -22,7 +22,7 @@ steps:
     - ${_LOCATION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO_ID}/dbt-runner:$COMMIT_SHA
     - --region=${_LOCATION}
     - --service-account=${_SERVICE_ACCOUNT_EMAIL}
-    - --set-env-vars=DBT_PROJECT=${_PROJECT_ID},'DBT_DATASET'=${_BIGQUERY_DATASET_ID},DBT_LOCATION=${_LOCATION}
+    - --set-env-vars=DBT_PROJECT=${_PROJECT_ID},DBT_DATASET=${_BIGQUERY_DATASET_ID},DBT_LOCATION=${_LOCATION}
     
 options:
   logging: CLOUD_LOGGING_ONLY

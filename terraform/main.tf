@@ -17,7 +17,10 @@ resource "google_project_service" "required_apis" {
     "pubsub.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
-    "cloudresourcemanager.googleapis.com"
+    "cloudresourcemanager.googleapis.com",
+    "workflows.googleapis.com",
+    "workflowexecutions.googleapis.com",
+    "logging.googleapis.com"
   ])
 
   service            = each.key
@@ -40,7 +43,8 @@ resource "google_project_iam_member" "strava_pipeline_permissions" {
     "roles/iam.serviceAccountUser",
     "roles/bigquery.jobUser",
     "roles/eventarc.eventReceiver",
-    "roles/eventarc.admin"
+    "roles/eventarc.admin",
+    "roles/workflows.invoker"
   ])
 
   project = data.google_project.project.project_id
@@ -146,21 +150,14 @@ resource "google_storage_bucket" "strava_activity_storage" {
   force_destroy               = false
 }
 
-resource "google_storage_bucket_iam_member" "strava_activity_storage_writer" {
-  bucket = google_storage_bucket.strava_activity_storage.name
-  role = "roles/storage.objectCreator"
-  member = "serviceAccount:${google_service_account.strava_pipeline.email}"
-}
+resource "google_storage_bucket_iam_member" "strava_pipeline_storage_admin" {
+  for_each = toset([
+    google_storage_bucket.state_storage.name,
+    google_storage_bucket.strava_activity_storage.name
+  ])
 
-resource "google_storage_bucket_iam_member" "strava_activity_object_viewer" {
-  bucket = google_storage_bucket.strava_activity_storage.name
-  role = "roles/storage.objectViewer"
-  member = "serviceAccount:${google_service_account.strava_pipeline.email}"
-}
-
-resource "google_storage_bucket_iam_member" "state_storage_object_creator" {
-  bucket = google_storage_bucket.state_storage.name
-  role = "roles/storage.objectAdmin"
+  bucket = each.key
+  role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.strava_pipeline.email}"
 }
 
@@ -374,4 +371,62 @@ resource "google_cloudbuild_trigger" "dbt_image_build_trigger" {
     _REPO_ID        = google_artifact_registry_repository.strava-transformation-repository.repository_id
     _BIGQUERY_DATASET_ID = google_bigquery_dataset.strava_activities.dataset_id
   }
+}
+
+resource "google_workflows_workflow" "dbt_transformation_workflow" {
+  name            = "dbt-transformation-workflow"
+  region          = var.gcp_project_region
+  project         = data.google_project.project.project_id
+  description     = "executes the dbt cloud run job when a BigQuery load job completes."
+  service_account = google_service_account.strava_pipeline.email
+
+  source_contents = <<-EOF
+  main:
+    params: [event]
+    steps:
+      - init:
+          assign:
+            - project_id: ${data.google_project.project.project_id}
+            - job_location: ${var.gcp_project_region}
+            - job_name: "dbt-run-job"
+      
+      - check_event_type:
+          switch:
+            - condition: $${event.data.protoPayload.serviceData.jobCompletedEvent.eventName == "load_job_completed"}
+              next: execute_dbt_job
+          next: end 
+          
+      - execute_dbt_job:
+          call: googleapis.run.v2.projects.locations.jobs.run
+          args:
+            name: $${"projects/" + project_id + "/locations/" + job_location + "/jobs/" + job_name}
+            body: {}
+          result: job_execution
+      - finish:
+          return: $${job_execution}
+  EOF
+}
+
+resource "google_eventarc_trigger" "bigquery_load_event_trigger" {
+  name     = "bigquery-load-event-trigger"
+  location = var.gcp_project_region
+  
+  matching_criteria {
+    attribute = "type"
+    value     = "google.cloud.audit.log.v1.written"
+  }
+  matching_criteria {
+    attribute = "serviceName"
+    value     = "bigquery.googleapis.com"
+  }
+  matching_criteria {
+    attribute = "methodName"
+    value     = "jobservice.jobcompleted"
+  }
+  destination {
+    workflow = google_workflows_workflow.dbt_transformation_workflow.id
+  }
+  service_account = google_service_account.strava_pipeline.id
+
+  depends_on = [google_project_service.required_apis]
 }

@@ -2,8 +2,8 @@ strava_pipeline_transform:
   target: prod
   outputs:
     prod:
-      type: oauth
-      method: service-account
+      type: bigquery
+      method: oauth
       project: "{{ env_var('DBT_PROJECT') }}"
       dataset: "{{ env_var('DBT_DATASET') }}"
       threads: 4

@@ -2,7 +2,7 @@ name: 'strava_pipeline_transform'
 version: '1.0.0'
 config-version: 2
 
-profile: 'strava_pipeline'
+profile: 'strava_pipeline_transform'
 
 model-paths: ["models"]
 

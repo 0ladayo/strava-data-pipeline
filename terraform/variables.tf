@@ -57,6 +57,6 @@ variable "gcs_bucket_name" {
 }
 
 variable "gcs_bucket_name_ii" {
-  description = "The Bucket to store State.Json"
+  description = "The Bucket to store Activity Data Parquet File"
   type        = string
 }

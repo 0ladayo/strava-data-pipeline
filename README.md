@@ -4,6 +4,8 @@ This project is a data pipeline that extracts data from the Strava API, loads it
 
 ## Architecture
 
+![Architecture Diagram](architecture.jpg)
+
 The data pipeline is built on a serverless architecture using various GCP services. The main components are:
 
 -   **Terraform:** The slow changing infrastructure is defined as a code using Terraform.
@@ -108,3 +110,5 @@ curl -X POST https://www.strava.com/api/v3/push_subscriptions \
      -F client_secret=YOUR_CLIENT_SECRET \
      -F callback_url=YOUR_FUNCTION_URL \
      -F verify_token=YOUR_VERIFY_TOKEN
+
+```

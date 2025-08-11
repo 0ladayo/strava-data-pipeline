@@ -36,7 +36,7 @@ The ELT (Extract, Load, Transform) process is as follows:
     -   This function reads the data from the Parquet file and loads it into the main BigQuery table.
 
 3.  **Transform:**
-    -   An Eventarc trigger is configured to listen for "load job completed" events in BigQuery.
+    -   An Eventarc trigger is configured to listen for "job completed" events in BigQuery.
     -   When a load job finishes, the trigger invokes a Google Workflow.
     -   The Workflow starts a Cloud Run job that runs a dbt command to transform the raw data in BigQuery. The transformed data is stored in a set of tables within the same BigQuery dataset.
 
@@ -44,7 +44,7 @@ The ELT (Extract, Load, Transform) process is as follows:
 
 All the necessary cloud infrastructure for this project is managed as code using Terraform. The Terraform files are located in the `terraform/` directory.
 
--   **`main.tf`**: This file contains the core infrastructure definitions, including the GCP services like Cloud Functions, Pub/Sub, BigQuery, and Cloud Storage buckets.
+-   **`main.tf`**: This file contains the core infrastructure definitions, including the GCP services like Cloud Build Triggers, Pub/Sub, BigQuery, and Cloud Storage buckets.
 -   **`variables.tf`**: This file defines the variables used in the Terraform configuration, such as the GCP project ID and region.
 -   **`backend.tf`**: This file configures the Terraform backend, which is where Terraform stores its state. It is configured to use a Google Cloud Storage bucket for remote state storage.
 

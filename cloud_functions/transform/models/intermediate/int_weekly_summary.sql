@@ -3,9 +3,10 @@ with activities as (
     from {{ ref('int_activities_transformed') }}
 ),
 
-monthly_summary as (
+weekly_summary as (
     select 
-    DATE_TRUNC(activity_date, MoNTH) as activity_month,
+    DATE_TRUNC(activity_date, WEEK) as period,
+    'Weekly' as granularity,
     sum(distance_km) as total_distance_km,
     sum(elevation_gain_km) as total_elevation_gain_km,
     count(strava_activity_id) as total_runs,
@@ -16,7 +17,7 @@ monthly_summary as (
     end as average_pace_mins_per_km
 
     from activities
-    group by 1
+    group by period, granularity
 )
 
-Select * from monthly_summary
+Select * from weekly_summary
